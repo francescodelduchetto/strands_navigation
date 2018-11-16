@@ -4,6 +4,10 @@ import rospy
 from topological_navigation.tmap_utils import *
 from strands_navigation_msgs.msg import NavRoute
 
+## FRA Add
+from lindimp_museum_content.srv import NodeClosed
+##
+
 
 class NodeToExpand(object):
     def __init__(self, name, father, current_distance, dist_to_target):
@@ -16,17 +20,48 @@ class NodeToExpand(object):
 
     def __repr__(self):
         return "-------\n\t Node: \n\t name:%s \n\t Father:%s \n\t current_distance:%f \n\t distance to target: %f \n\t cost %f \n" %(self.name, self.father, self.current_distance, self.dist_to_target, self.cost)
-        
+
 
 class TopologicalRouteSearch(object):
-       
+
     def __init__(self, top_map) :
         rospy.loginfo("Waiting for Topological map ...")
         self.top_map = top_map
 
+        self.nodeClosedSrv = None
+        self._contact_isNodeClosed_srv()
+
+    def _contact_isNodeClosed_srv(self):
+        try:
+            rospy.wait_for_service('is_node_closed', timeout=2)
+        except ROSException as e:
+            rospy.logwarn("Service /is_node_closed not available: %s" % e)
+        else:
+            self.nodeClosedSrv = rospy.ServiceProxy('is_node_closed', NodeClosed)
+            rospy.loginfo("Service /is_node_closed contacted")
+
+
+    # ADD Francesco
+    def remove_closed_nodes(self, nodes):
+        # try to see if now it's available
+        if self.nodeClosedSrv is None:
+            self._contact_isNodeClosed_srv()
+
+        # was it available?
+        if self.nodeClosedSrv is None:
+            return nodes
+        else:
+            up_nodes = []
+            for node in nodes:
+                if not self.nodeClosedSrv(node).closed:
+                    up_nodes.append(node)
+            return up_nodes
+    ##
+
+
     """
      search_route
-     
+
      This function searches the route to reach the goal
     """
     def search_route(self, origin, target):
@@ -35,19 +70,22 @@ class TopologicalRouteSearch(object):
         to_expand=[]
         children=[]
         expanded=[]
-        
+
         #print 'searching route from %s to %s' %(orig.name, goal.name)
-        
+
         #self.get_distance_to_node(goal, orig)
         nte = NodeToExpand(orig.name, 'none', 0.0, get_distance_to_node(goal, orig))  #Node to Expand
         expanded.append(nte)
         #to_expand.append(nte)
-        
+
 #        exp_index=0
-        cen = orig      #currently expanded node 
-        
+        cen = orig      #currently expanded node
+
         children = get_conected_nodes(cen) #nodes current node is connected to
-        #print children
+        children = self.remove_closed_nodes(children)
+
+        print children
+
         not_goal=True
         route_found=False
         while not_goal :
@@ -68,7 +106,7 @@ class TopologicalRouteSearch(object):
                     for j in to_expand:
                         if i == j.name:
                             been_expanded = True
-                            
+
                     if not been_expanded:
                         nnn = get_node(self.top_map, i)
                         tdist = get_distance_to_node(goal, nnn)
@@ -83,10 +121,11 @@ class TopologicalRouteSearch(object):
                     cen =  get_node(self.top_map, nte.name)
                     expanded.append(nte)
                     children = get_conected_nodes(cen)
+                    children = self.remove_closed_nodes(children)
                 else:
                     not_goal=False
                     route_found=False
-        
+
         route = NavRoute()
 #        print "===== RESULT ====="
         if route_found:
@@ -101,7 +140,7 @@ class TopologicalRouteSearch(object):
                         steps.append(i)
                         next_node = i.father
                         break
-            
+
             steps.reverse()
             val = len(steps)
             for i in range(1, val):
@@ -109,7 +148,7 @@ class TopologicalRouteSearch(object):
                 route.source.append(steps[i].father)
                 route.edge_id.append(edg[0].edge_id)
                 #route.append(r)
-        
+
             return route
         else:
             return None
