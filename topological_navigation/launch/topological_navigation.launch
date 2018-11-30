@@ -20,7 +20,8 @@
 	<!-- <node pkg="topological_navigation" type="map_publisher.py" name="topological_map_publisher" args="$(arg map)"/> -->
 	<node pkg="topological_navigation" type="map_manager.py" name="topological_map_manager" args="$(arg map)" respawn="true"/>
 
-	<node pkg="fremenserver" type="fremenserver" name="fremenserver" respawn="true"/>
+	<!-- <node pkg="fremenserver" type="fremenserver" name="fremenserver" respawn="true"/> -->
+        <node pkg="topological_navigation" name="speed_based_prediction" type="speed_based_prediction.py" output="screen" respawn="true"/>
 
 	<node pkg="topological_navigation" name="topological_localisation" type="localisation.py" output="screen" respawn="true"/>
 	<node pkg="topological_navigation" name="topological_navigation" type="navigation.py" output="screen" respawn="true">
