@@ -5,7 +5,7 @@ from topological_navigation.tmap_utils import *
 from strands_navigation_msgs.msg import NavRoute
 
 ## FRA Add
-from lindimp_museum_content.srv import NodeClosed
+from strands_navigation_msgs.srv import GetBlacklistedNodes
 ##
 
 
@@ -33,12 +33,12 @@ class TopologicalRouteSearch(object):
 
     def _contact_isNodeClosed_srv(self):
         try:
-            rospy.wait_for_service('is_node_closed', timeout=2)
+            rospy.wait_for_service('topological_navigation/get_blacklisted_nodes', timeout=2)
         except ROSException as e:
-            rospy.logwarn("Service /is_node_closed not available: %s" % e)
+            rospy.logwarn("Service /topological_navigation/get_blacklisted_nodes not available: %s" % e)
         else:
-            self.nodeClosedSrv = rospy.ServiceProxy('is_node_closed', NodeClosed)
-            rospy.loginfo("Service /is_node_closed contacted")
+            self.nodeClosedSrv = rospy.ServiceProxy('topological_navigation/get_blacklisted_nodes', GetBlacklistedNodes)
+            rospy.loginfo("Service /topological_navigation/get_blacklisted_nodes contacted")
 
 
     # ADD Francesco
@@ -51,11 +51,12 @@ class TopologicalRouteSearch(object):
         if self.nodeClosedSrv is None:
             return nodes
         else:
-            up_nodes = []
-            for node in nodes:
-                if not self.nodeClosedSrv(node).closed:
-                    up_nodes.append(node)
-            return up_nodes
+            try:
+                c_nodes = self.nodeClosedSrv().nodes
+                return [item for item in nodes if item not in c_nodes]
+            except rospy.ServiceException, e:
+                print "Service call failed: %s"%e
+                return nodes
     ##
 
 

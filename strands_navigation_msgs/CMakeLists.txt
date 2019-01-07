@@ -47,6 +47,7 @@ add_service_files(
   AskHelp.srv
   DelMonitorRecoveryPair.srv
   ModifyTag.srv
+  GetBlacklistedNodes.srv
   GetTags.srv
   GetNodeTags.srv
   GetTaggedNodes.srv
